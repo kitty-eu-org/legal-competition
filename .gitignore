@@ -5,7 +5,8 @@ __pycache__/
 
 # C extensions
 *.so
-
+data/train
+data/test
 # Distribution / packaging
 .Python
 build/
@@ -127,3 +128,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/data/train/
