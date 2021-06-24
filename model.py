@@ -6,7 +6,7 @@
 @Motto：ABC(Always Be Coding)
 
 """
-from datasets import tqdm
+from tqdm import tqdm
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, AdamW,AutoConfig
 import torch
@@ -30,9 +30,9 @@ optimizer = AdamW(model.parameters(), lr=2e-5)
 train_data_list = handle_data()
 res_train_list, res_vail_list = handle_classier_data(train_data_list)
 train_dataset = MyDataset(data_list=res_train_list, tokenizer=tokenizer)
-vail_dataset = MyDataset(res_vail_list, tokenizer, False)
-train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-vail_loader = DataLoader(vail_dataset, batch_size=4)
+vail_dataset = MyDataset(res_vail_list, tokenizer)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+vail_loader = DataLoader(vail_dataset, batch_size=16)
 total_loss, total_val_loss = 0, 0
 total_eval_accuracy = 0
 
@@ -51,15 +51,16 @@ for epoch in range(5):
         if step % 200 == 0 and step > 0:  # 每10步输出一下训练的结果，flat_accuracy()会对logits进行softmax
             model.eval()
             with torch.no_grad():
-                logits = torch.nn.Softmax(dim=-1)(logits.data).cpu().numpy()
+                # logits = torch.nn.Softmax(dim=-1)().cpu().numpy()
+                predicted = torch.argmax(logits.data,dim=-1).cpu().numpy()
                 # predicted = torch.max(logits, 1)[0]
-                predicted = logits[:, 1]
+                # predicted = logits[:, 1]
                 # logits = logits.detach().cpu().numpy()
                 # predicted = predicted.cpu().numpy()
-                label_ids = batch["labels"].cpu().numpy()
-                accuracy = accuracy_score(labels, predicted)
-                print("loss: ", loss)
-                print(f"epoch: {epoch}\tstep:{step}\tauc_score: {accuracy:.4f}")
+                label_ids = batch["labels"].data.cpu().numpy()
+                accuracy = accuracy_score(label_ids, predicted)
+                print("\nloss: ", loss.item())
+                print(f"epoch: {epoch}\tstep:{step}\tacc_score: {accuracy:.4f}")
                 # 每个epoch结束，就使用validation数据集评估一次模型
     model.eval()
     with torch.no_grad():
@@ -72,10 +73,11 @@ for epoch in range(5):
             with torch.no_grad():
                 out_put = model(input_ids, attention_mask=attention_mask, labels=labels)
                 loss, logits = out_put[0], out_put[1]
-                logits = torch.nn.Softmax(dim=1)(logits.data).cpu().numpy()
+                # logits = torch.nn.Softmax(dim=1)(logits.data).cpu().numpy()
                 # predicted = torch.max(logits, 1)[0]
                 # predicted = predicted.cpu().numpy()
-                predicted = logits[:, 1]
+                # predicted = logits[:, 1]
+                predicted = torch.argmax(logits.data, dim=-1).cpu().numpy()
                 total_val_loss += loss.item()
                 label_ids = batch["labels"].cpu().numpy()
                 auc_value = accuracy_score(label_ids, predicted)
@@ -90,6 +92,6 @@ for epoch in range(5):
 
         print(f'Train loss     : {avg_train_loss}')
         print(f'Validation loss: {avg_val_loss}')
-        print(f'auc_score: {auc_value:.4f}')
+        print(f'acc_score: {auc_value:.4f}')
         print('\n')
         model.save_pretrained("./my_models/finetuning" + '-' + str(epoch))

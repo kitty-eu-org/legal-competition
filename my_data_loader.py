@@ -27,7 +27,7 @@ class MyDataset(Dataset):
         if self.label_flag:
             item_dict = dict()
             for key, val in self.encodings.items():
-                item_dict[key] = torch.tensor(val[idx])
+                item_dict[key] = val[idx]
                 # new_label = F.one_hot(torch.tensor(label), num_classes=5)
                 item_dict["labels"] = torch.tensor(label)
 
@@ -35,7 +35,7 @@ class MyDataset(Dataset):
         else:
             item_dict = dict()
             for key, val in self.encodings.items():
-                item_dict[key] = torch.tensor(val[idx])
+                item_dict[key] = val[idx]
             return item_dict
 
     def __len__(self):
