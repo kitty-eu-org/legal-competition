@@ -61,5 +61,35 @@ for epoch in range(5):
                 print("loss: ", loss)
                 print(f"epoch: {epoch}\tstep:{step}\tauc_score: {accuracy:.4f}")
                 # 每个epoch结束，就使用validation数据集评估一次模型
-    # model.eval()
+    model.eval()
+    with torch.no_grad():
+        print('testing ....')
+        auc_value_list = []
+        for i, batch in enumerate(vail_loader):
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
+            with torch.no_grad():
+                out_put = model(input_ids, attention_mask=attention_mask, labels=labels)
+                loss, logits = out_put[0], out_put[1]
+                logits = torch.nn.Softmax(dim=1)(logits.data).cpu().numpy()
+                # predicted = torch.max(logits, 1)[0]
+                # predicted = predicted.cpu().numpy()
+                predicted = logits[:, 1]
+                total_val_loss += loss.item()
+                label_ids = batch["labels"].cpu().numpy()
+                auc_value = accuracy_score(label_ids, predicted)
+                auc_value_list.append(auc_value)
+                # print(f"eval auc_value: {auc_value}")
+        avg_train_loss = total_loss / len(train_loader)
+        avg_val_loss = total_val_loss / len(vail_loader)
+        import numpy as np
 
+        auc_value = np.mean(auc_value_list)
+        avg_val_accuracy = total_eval_accuracy / len(vail_loader)
+
+        print(f'Train loss     : {avg_train_loss}')
+        print(f'Validation loss: {avg_val_loss}')
+        print(f'auc_score: {auc_value:.4f}')
+        print('\n')
+        model.save_pretrained("./my_models/finetuning" + '-' + str(epoch))
